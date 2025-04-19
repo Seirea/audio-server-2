@@ -1,4 +1,8 @@
 console.log("Hello from client");
+const decoder = new window["ogg-opus-decoder"].OggOpusDecoderWebWorker();
+await decoder.ready;
+console.log("Opus decoder ready");
+
 const client = new WebTransport("https://127.0.0.1:4433", {
   serverCertificateHashes: [
     {
@@ -13,27 +17,26 @@ const client = new WebTransport("https://127.0.0.1:4433", {
   ],
 });
 
-console.log("Hello from client1.1");
 await client.ready;
-console.log("Hello from client1.2");
-const { readable, writable } = await client.createBidirectionalStream();
+console.log("WebTransport ready");
 
-console.log("Hello from client2");
+const { readable, writable } = await client.createBidirectionalStream();
+console.log("Stream Created");
+
 const consoleOutStream = new WritableStream({
   write(chunk) {
     console.log(chunk);
   },
 });
 
-console.log("Hello from client4");
+let audioContext = new AudioContext({
+  latencyHint: "interactive",
+});
 
-let mediaSource = new MediaSource();
-let feelz = document.getElementById("sentir");
-feelz.src = URL.createObjectURL(mediaSource);
-await new Promise((resolve) =>
-  mediaSource.addEventListener("sourceopen", resolve, { once: true })
-);
-const sourceBuffer = mediaSource.addSourceBuffer('audio/webm;codecs="opus"');
+window.resumeAudioContext = async function () {
+  console.log("started audio playing!");
+  await startFeelzing();
+};
 
 await writable
   .getWriter()
@@ -41,36 +44,45 @@ await writable
 
 const reader = readable.getReader();
 
-while (true) {
-  const { done, value } = await reader.read();
+async function startFeelzing() {
+  let offset = audioContext.currentTime;
+  while (true) {
+    const { done, value } = await reader.read();
 
-  console.log("READ", done, value);
+    if (done) {
+      const res = await decoder.flush();
 
-  if (done) {
-    if (mediaSource.readyState === "open") {
-      mediaSource.endOfStream();
+      console.log("Final out:", res);
+
+      await decoder.reset();
+      break;
     }
-    break;
+
+    const { channelData, samplesDecoded, sampleRate } = await decoder.decode(
+      value,
+    );
+
+    console.log(`Decoded ${samplesDecoded} samples!`);
+
+    const bufferSource = audioContext.createBufferSource();
+    const audioBuffer = audioContext.createBuffer(
+      channelData.length,
+      samplesDecoded,
+      sampleRate,
+    );
+
+    channelData.forEach((channel, idx) => {
+      audioBuffer.getChannelData(idx).set(channel);
+    });
+
+    bufferSource.buffer = audioBuffer;
+    bufferSource.connect(audioContext.destination);
+
+    console.log("STARING WITH OFFSET:", offset);
+    bufferSource.start(offset);
+
+    offset += audioBuffer.duration;
   }
 
-  // Append the received data chunk to the SourceBuffer
-  try {
-    // Wait for the previous append operation to finish if updating
-    if (sourceBuffer.updating) {
-      await new Promise((resolve) =>
-        sourceBuffer.addEventListener("updateend", resolve, { once: true })
-      );
-    }
-    sourceBuffer.appendBuffer(value);
-  } catch (error) {
-    console.error("Error appending buffer:", error);
-    console.log("ENDING MEDIA SOURCE NOW!");
-    // Handle errors, potentially close the MediaSource
-    if (mediaSource.readyState === "open") {
-      mediaSource.endOfStream("decode"); // Or 'network' depending on the error
-    }
-    break;
-  }
+  client.close();
 }
-
-client.close();

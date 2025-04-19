@@ -22,7 +22,7 @@ async function handle(wt: WebTransport & { url: string }) {
       readable,
       writable,
     } of wt.incomingBidirectionalStreams) {
-      const output = await Deno.open("out.webm", {
+      const output = await Deno.open("out.opus", {
         read: true,
         write: false,
       });
