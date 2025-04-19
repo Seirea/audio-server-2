@@ -1,10 +1,10 @@
 const cert = Deno.readTextFileSync("./cert.pem");
 const key = Deno.readTextFileSync("./key.pem");
 
-// import { serveDir, serveFile } from "jsr:@std/http/file-server";
+import { serveDir, serveFile } from "jsr:@std/http/file-server";
 
 const server = new Deno.QuicEndpoint({
-  hostname: "localhost",
+  hostname: "0.0.0.0",
   port: 4433,
 });
 
@@ -29,9 +29,9 @@ async function handle(wt: WebTransport & { url: string }) {
   wt.close({ closeCode: 0, reason: "Stream Over" });
 }
 
-// Deno.serve((req: Request) => {
-//   return serveDir(req);
-// });
+Deno.serve((req: Request) => {
+  return serveDir(req);
+});
 
 for await (const conn of listener) {
   try {
