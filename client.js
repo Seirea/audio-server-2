@@ -1,12 +1,3 @@
-function base64ToArrayBuffer(base64) {
-  var binaryString = atob(base64);
-  var bytes = new Uint8Array(binaryString.length);
-  for (var i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
-
 console.log("Hello from client");
 const client = new WebTransport("https://127.0.0.1:4433", {
   serverCertificateHashes: [
@@ -14,9 +5,9 @@ const client = new WebTransport("https://127.0.0.1:4433", {
       algorithm: "sha-256",
       //value: base64ToArrayBuffer("2BKrG2dqsSH2jyv1K9YmkPiuVlKzL7IbmiluEX8cuuU="),
       value: new Uint8Array(
-        "07:F5:D9:DC:76:2A:EE:16:B3:F1:FF:EA:1C:5C:67:CE:EA:74:8F:E6:78:2C:51:B6:5F:AF:CE:48:55:BE:84:68"
+        "6C:0A:C3:63:04:39:75:25:64:98:8F:01:81:0F:1B:43:C0:9F:7D:AE:33:08:79:AE:82:95:66:63:1F:D3:3D:1F"
           .split(":")
-          .map((el) => parseInt(el, 16))
+          .map((el) => parseInt(el, 16)),
       ),
     },
   ],
@@ -34,17 +25,52 @@ const consoleOutStream = new WritableStream({
   },
 });
 
-console.log("Hello from client3");
-// let mediaSource = new MediaSource();
-// await new Promise((resolve) =>
-//   mediaSource.addEventListener("sourceopen", resolve, { once: true })
-// );
-// const sourceBuffer = mediaSource.addSourceBuffer("audio/opus");
+console.log("Hello from client4");
+
+let mediaSource = new MediaSource();
+let feelz = document.getElementById("sentir");
+feelz.src = URL.createObjectURL(mediaSource);
+await new Promise((resolve) =>
+  mediaSource.addEventListener("sourceopen", resolve, { once: true })
+);
+const sourceBuffer = mediaSource.addSourceBuffer('audio/webm;codecs="opus"');
 
 await writable
   .getWriter()
   .write(new TextEncoder().encode("Hello from Client!"));
 
-await readable.pipeTo(consoleOutStream);
+const reader = readable.getReader();
+
+while (true) {
+  const { done, value } = await reader.read();
+
+  console.log("READ", done, value);
+
+  if (done) {
+    if (mediaSource.readyState === "open") {
+      mediaSource.endOfStream();
+    }
+    break;
+  }
+
+  // Append the received data chunk to the SourceBuffer
+  try {
+    // Wait for the previous append operation to finish if updating
+    if (sourceBuffer.updating) {
+      await new Promise((resolve) =>
+        sourceBuffer.addEventListener("updateend", resolve, { once: true })
+      );
+    }
+    sourceBuffer.appendBuffer(value);
+  } catch (error) {
+    console.error("Error appending buffer:", error);
+    console.log("ENDING MEDIA SOURCE NOW!");
+    // Handle errors, potentially close the MediaSource
+    if (mediaSource.readyState === "open") {
+      mediaSource.endOfStream("decode"); // Or 'network' depending on the error
+    }
+    break;
+  }
+}
 
 client.close();

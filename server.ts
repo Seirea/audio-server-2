@@ -15,18 +15,29 @@ const listener = server.listen({
 });
 
 async function handle(wt: WebTransport & { url: string }) {
-  await wt.ready;
+  try {
+    await wt.ready;
 
-  for await (const { readable, writable } of wt.incomingBidirectionalStreams) {
-    const output = await Deno.open("out.opus", {
-      read: true,
-      write: false,
-    });
+    for await (const {
+      readable,
+      writable,
+    } of wt.incomingBidirectionalStreams) {
+      const output = await Deno.open("out.webm", {
+        read: true,
+        write: false,
+      });
 
-    await output.readable.pipeTo(writable);
+      await output.readable.pipeTo(writable);
+    }
+  } catch (e) {
+    console.log(e);
+    console.trace();
   }
 
-  wt.close({ closeCode: 0, reason: "Stream Over" });
+  return wt.closed.then(() => ({
+    code: 0,
+    reason: `Done streaming request`,
+  }));
 }
 
 Deno.serve((req: Request) => {
