@@ -1,0 +1,33 @@
+edition = "2023";
+
+enum ReponseType {
+  REPONSE_TYPE_SUCCESS = 1;
+  REPONSE_TYPE_FAILED_TO_LOCATE = 2;
+  REPONSE_TYPE_OUT_OF_BOUNDS = 3;
+}
+
+message Initiate {
+  // id of track
+  uint64 track_id = 1;
+}
+message InitiateResponse {
+  ReponseType type = 1;
+  // length of the track
+  optional uint32 length = 2;
+}
+
+message PollRequest {
+  // the byte index
+  uint32 index = 1;
+  // the length of the chunk in bytes
+  uint32 length = 2;
+}
+
+message PollResponse {
+  // if failed
+  ReponseType type = 1;
+  optional bytes data = 3;
+}
+message End {
+
+}
