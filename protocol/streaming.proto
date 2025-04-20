@@ -1,6 +1,8 @@
 edition = "2023";
+package streaming;
 
 enum ReponseType {
+  REPONSE_TYPE_UNSPECIFIED = 0;
   REPONSE_TYPE_SUCCESS = 1;
   REPONSE_TYPE_FAILED_TO_LOCATE = 2;
   REPONSE_TYPE_OUT_OF_BOUNDS = 3;
@@ -13,7 +15,7 @@ message Initiate {
 message InitiateResponse {
   ReponseType type = 1;
   // length of the track
-  optional uint32 length = 2;
+  uint32 length = 2;
 }
 
 message PollRequest {
@@ -26,7 +28,7 @@ message PollRequest {
 message PollResponse {
   // if failed
   ReponseType type = 1;
-  optional bytes data = 3;
+  bytes data = 3;
 }
 message End {
 

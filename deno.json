@@ -1,7 +1,10 @@
 {
   "tasks": {
-    "dev": "deno run --watch -A --unstable-net server.ts"
+    "dev": "deno run --watch -A --unstable-net server.ts",
+    "proto": "buf generate"
   },
   "imports": {
+    "@bufbuild/protobuf": "npm:@bufbuild/protobuf",
+    "@bufbuild/protoc-gen-es": "npm:@bufbuild/protoc-gen-es"
   }
 }

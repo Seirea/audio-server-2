@@ -1,0 +1,13 @@
+version: v2
+inputs:
+  - directory: protocol
+clean: true
+plugins:
+  - local: ["deno", "run", "--allow-env", "npm:@bufbuild/protoc-gen-es"]
+    opt:
+      - target=ts
+      - import_extension=ts
+      - rewrite_imports=@bufbuild/protobuf:npm:@bufbuild/protobuf
+      - rewrite_imports=@bufbuild/protobuf/codegenv1:npm:@bufbuild/protobuf/codegenv1
+    out: generated
+    include_imports: true
